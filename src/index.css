@@ -4,3 +4,132 @@ html {
   scroll-behavior: smooth;
   scroll-padding-top: 80px;
 }
+
+/* SAMFEM hero slider transitions */
+@keyframes samfemHeroFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hero-fade {
+  animation: samfemHeroFade 700ms ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-fade {
+    animation: none;
+  }
+}
+
+
+/* SAMFEM scrolling service strip */
+.service-marquee {
+  overflow: hidden;
+  width: 100%;
+  padding: 15px 0;
+  background: linear-gradient(100deg, #0f2d55, #164e8a, #0f2d55);
+  color: #ffffff;
+}
+
+.service-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: samfemMarquee 34s linear infinite;
+  will-change: transform;
+}
+
+.service-marquee:hover .service-marquee-track {
+  animation-play-state: paused;
+}
+
+.service-marquee-group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2rem;
+  padding-right: 2rem;
+}
+
+.service-marquee-item {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2rem;
+  white-space: nowrap;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.service-marquee-star {
+  color: #fbbf24;
+  font-size: 1.1rem;
+}
+
+@keyframes samfemMarquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Website-wide dark theme */
+html[data-theme='dark'] body {
+  background-color: #0b1220;
+  color: #e2e8f0;
+}
+
+html[data-theme='dark'] .bg-white,
+html[data-theme='dark'] .bg-white\/95 {
+  background-color: #111c2e !important;
+}
+
+html[data-theme='dark'] .bg-slate-50 {
+  background-color: #0b1220 !important;
+}
+
+html[data-theme='dark'] .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+
+html[data-theme='dark'] .text-slate-900,
+html[data-theme='dark'] .text-slate-800,
+html[data-theme='dark'] .text-slate-700 {
+  color: #f1f5f9 !important;
+}
+
+html[data-theme='dark'] .text-slate-600,
+html[data-theme='dark'] .text-slate-500,
+html[data-theme='dark'] .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme='dark'] .border-slate-100,
+html[data-theme='dark'] .border-slate-200 {
+  border-color: #334155 !important;
+}
+
+html[data-theme='dark'] input,
+html[data-theme='dark'] select,
+html[data-theme='dark'] textarea {
+  background-color: #172337 !important;
+  color: #f1f5f9 !important;
+  border-color: #475569 !important;
+}
+
+html[data-theme='dark'] input::placeholder,
+html[data-theme='dark'] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html[data-theme='dark'] option {
+  background-color: #172337;
+  color: #f1f5f9;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .service-marquee-track { animation: none; }
+}

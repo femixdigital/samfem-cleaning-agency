@@ -39,3 +39,14 @@ samfem-flyer-*-grid.png
 *.bak*
 *.backup
 *.image-backup
+.env.local
+
+# Local audit archives
+*.zip
+
+# Local source backups
+*.pre-enquiry-integration
+*.before-logo-fix
+*.slider-backup
+*.theme-backup
+*.marquee-backup

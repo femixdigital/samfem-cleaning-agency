@@ -1,5 +1,6 @@
 import Navbar from '../components/Navbar'
 import Hero from '../components/Hero'
+import ServiceMarquee from '../components/ServiceMarquee'
 import Services from '../components/Services'
 import Gallery from '../components/Gallery'
 import Promotions from '../components/Promotions'
@@ -15,6 +16,7 @@ const Home = () => {
 
       <main>
         <Hero />
+          <ServiceMarquee />
         <Services />
         <Gallery />
         <Promotions />

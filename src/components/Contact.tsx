@@ -1,36 +1,173 @@
-import { MapPin, Phone, Mail, MessageCircle, ArrowRight } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
+import {
+  MapPin,
+  Phone,
+  Mail,
+  MessageCircle,
+  ArrowRight,
+  Paperclip,
+  FileText,
+  X,
+} from 'lucide-react'
+import { supabase } from '../lib/supabase'
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024
+
+const ALLOWED_FILE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+]
 
 const Contact = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
   const today = new Date()
+
   const minDate = new Date(
     today.getTime() - today.getTimezoneOffset() * 60000
   )
     .toISOString()
     .split('T')[0]
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null
+
+    if (!file) {
+      setSelectedFile(null)
+      return
+    }
+
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      setSubmitMessage(
+        'Unsupported file type. Please select JPG, PNG, WEBP or PDF.'
+      )
+      event.target.value = ''
+      setSelectedFile(null)
+      return
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setSubmitMessage('File is too large. Maximum allowed size is 20 MB.')
+      event.target.value = ''
+      setSelectedFile(null)
+      return
+    }
+
+    setSubmitMessage('')
+    setSelectedFile(file)
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    const formData = new FormData(event.currentTarget)
+    if (isSubmitting) return
 
-    const message = `
-Hello SAMFEM Cleaning Agency!
+    const form = event.currentTarget
+    const formData = new FormData(form)
+
+    const enquiry = {
+      full_name: String(formData.get('name') || '').trim(),
+      phone: String(formData.get('phone') || '').trim(),
+      service: String(formData.get('service') || ''),
+      property_location: String(formData.get('location') || '').trim(),
+      preferred_date: String(formData.get('date') || ''),
+      details: String(formData.get('details') || '').trim() || null,
+    }
+
+    const whatsappMessage = `Hello SAMFEM Cleaning Agency!
 
 I would like to request a cleaning service.
 
-Full Name: ${formData.get('name')}
-Phone Number: ${formData.get('phone')}
-Cleaning Service: ${formData.get('service')}
-Property Location: ${formData.get('location')}
-Preferred Cleaning Date: ${formData.get('date')}
-Additional Details: ${formData.get('details') || 'None'}
+Full Name: ${enquiry.full_name}
+Phone Number: ${enquiry.phone}
+Cleaning Service: ${enquiry.service}
+Property Location: ${enquiry.property_location}
+Preferred Cleaning Date: ${enquiry.preferred_date}
+Additional Details: ${enquiry.details || 'None'}
+Attachment: ${selectedFile ? selectedFile.name : 'None'}
 
-Please let me know the available options and quotation. Thank you.
-    `
+Please let me know the available options and quotation. Thank you.`
 
-    const whatsappUrl = `https://wa.me/2349132915450?text=${encodeURIComponent(message)}`
+    const whatsappUrl =
+      `https://wa.me/2349132915450?text=${encodeURIComponent(whatsappMessage)}`
 
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+    setIsSubmitting(true)
+    setSubmitMessage('Preparing your enquiry...')
+
+    try {
+      let attachmentPath: string | null = null
+      let attachmentName: string | null = null
+      let attachmentType: string | null = null
+      let attachmentSize: number | null = null
+
+      if (selectedFile) {
+        setSubmitMessage('Uploading your attachment...')
+
+        const safeFileName = selectedFile.name
+          .replace(/[^a-zA-Z0-9._-]/g, '_')
+          .slice(-150)
+
+        const filePath =
+          `public-enquiries/${crypto.randomUUID()}-${safeFileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('enquiry-attachments')
+          .upload(filePath, selectedFile, {
+            contentType: selectedFile.type,
+            upsert: false,
+          })
+
+        if (uploadError) {
+          throw new Error(
+            `Attachment upload failed: ${uploadError.message}`
+          )
+        }
+
+        attachmentPath = filePath
+        attachmentName = selectedFile.name
+        attachmentType = selectedFile.type
+        attachmentSize = selectedFile.size
+      }
+
+      setSubmitMessage('Saving your enquiry...')
+
+      const { error } = await supabase
+        .from('enquiries')
+        .insert({
+          ...enquiry,
+          attachment_path: attachmentPath,
+          attachment_name: attachmentName,
+          attachment_type: attachmentType,
+          attachment_size: attachmentSize,
+        })
+
+      if (error) {
+        throw new Error(`Unable to save enquiry: ${error.message}`)
+      }
+
+      setSubmitMessage('Enquiry saved! Redirecting to WhatsApp...')
+
+      setSelectedFile(null)
+      form.reset()
+
+      // Navigate in the current tab to avoid popup blocking.
+      window.location.assign(whatsappUrl)
+
+    } catch (error) {
+      console.error('Enquiry submission error:', error)
+
+      setSubmitMessage(
+        error instanceof Error
+          ? error.message
+          : 'Something went wrong. Please try again.'
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -56,6 +193,7 @@ Please let me know the available options and quotation. Thank you.
 
           {/* Contact Information */}
           <div className="rounded-2xl bg-slate-50 p-6 md:p-8">
+
             <h3 className="text-xl font-bold text-slate-900">
               Let's Talk About Your Cleaning Needs
             </h3>
@@ -74,8 +212,12 @@ Please let me know the available options and quotation. Thank you.
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
                   <Phone size={20} />
                 </span>
+
                 <span>
-                  <span className="block text-xs text-slate-500">Call Us</span>
+                  <span className="block text-xs text-slate-500">
+                    Call Us
+                  </span>
+
                   <span className="mt-1 block text-sm font-semibold text-slate-800">
                     09132915450
                   </span>
@@ -89,8 +231,12 @@ Please let me know the available options and quotation. Thank you.
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
                   <Mail size={20} />
                 </span>
+
                 <span className="min-w-0">
-                  <span className="block text-xs text-slate-500">Email Us</span>
+                  <span className="block text-xs text-slate-500">
+                    Email Us
+                  </span>
+
                   <span className="mt-1 block break-all text-sm font-semibold text-slate-800">
                     Itzsamfem@gmail.com
                   </span>
@@ -101,8 +247,12 @@ Please let me know the available options and quotation. Thank you.
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
                   <MapPin size={20} />
                 </span>
+
                 <span>
-                  <span className="block text-xs text-slate-500">Location</span>
+                  <span className="block text-xs text-slate-500">
+                    Location
+                  </span>
+
                   <span className="mt-1 block text-sm font-semibold text-slate-800">
                     Alagbaka, Akure, Ondo State
                   </span>
@@ -120,6 +270,7 @@ Please let me know the available options and quotation. Thank you.
               <MessageCircle size={19} />
               Chat with Us on WhatsApp
             </a>
+
           </div>
 
           {/* Booking Form */}
@@ -127,21 +278,27 @@ Please let me know the available options and quotation. Thank you.
             onSubmit={handleSubmit}
             className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"
           >
+
             <div>
               <h3 className="text-lg font-bold text-slate-900">
                 Cleaning Enquiry Form
               </h3>
+
               <p className="mt-1 text-xs text-slate-500">
-                Complete the fields below to prepare your WhatsApp enquiry.
+                Complete the fields below to submit your cleaning enquiry.
               </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
 
               <div>
-                <label htmlFor="customer-name" className="mb-2 block text-sm font-semibold text-slate-700">
+                <label
+                  htmlFor="customer-name"
+                  className="mb-2 block text-sm font-semibold text-slate-700"
+                >
                   Full Name *
                 </label>
+
                 <input
                   id="customer-name"
                   name="name"
@@ -154,9 +311,13 @@ Please let me know the available options and quotation. Thank you.
               </div>
 
               <div>
-                <label htmlFor="customer-phone" className="mb-2 block text-sm font-semibold text-slate-700">
+                <label
+                  htmlFor="customer-phone"
+                  className="mb-2 block text-sm font-semibold text-slate-700"
+                >
                   Phone Number *
                 </label>
+
                 <input
                   id="customer-phone"
                   name="phone"
@@ -176,9 +337,13 @@ Please let me know the available options and quotation. Thank you.
             </div>
 
             <div>
-              <label htmlFor="cleaning-service" className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="cleaning-service"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Cleaning Service *
               </label>
+
               <select
                 id="cleaning-service"
                 name="service"
@@ -186,7 +351,10 @@ Please let me know the available options and quotation. Thank you.
                 defaultValue=""
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
-                <option value="" disabled>Select the service you need</option>
+                <option value="" disabled>
+                  Select the service you need
+                </option>
+
                 <option>Residential Cleaning</option>
                 <option>Office & Commercial Cleaning</option>
                 <option>Post-Construction Cleaning</option>
@@ -195,9 +363,13 @@ Please let me know the available options and quotation. Thank you.
             </div>
 
             <div>
-              <label htmlFor="property-location" className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="property-location"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Property Location *
               </label>
+
               <input
                 id="property-location"
                 name="location"
@@ -210,9 +382,13 @@ Please let me know the available options and quotation. Thank you.
             </div>
 
             <div>
-              <label htmlFor="cleaning-date" className="mb-2 block text-sm font-semibold text-slate-700">
+              <label
+                htmlFor="cleaning-date"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
                 Preferred Cleaning Date *
               </label>
+
               <input
                 id="cleaning-date"
                 name="date"
@@ -224,9 +400,16 @@ Please let me know the available options and quotation. Thank you.
             </div>
 
             <div>
-              <label htmlFor="additional-details" className="mb-2 block text-sm font-semibold text-slate-700">
-                Additional Details <span className="font-normal text-slate-400">(Optional)</span>
+              <label
+                htmlFor="additional-details"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Additional Details{' '}
+                <span className="font-normal text-slate-400">
+                  (Optional)
+                </span>
               </label>
+
               <textarea
                 id="additional-details"
                 name="details"
@@ -236,18 +419,101 @@ Please let me know the available options and quotation. Thank you.
               />
             </div>
 
+            {/* File Attachment */}
+            <div>
+              <label
+                htmlFor="enquiry-attachment"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Attach Photos or Documents{' '}
+                <span className="font-normal text-slate-400">
+                  (Optional)
+                </span>
+              </label>
+
+              <label
+                htmlFor="enquiry-attachment"
+                className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-blue-500 hover:bg-blue-50"
+              >
+                <Paperclip className="mb-2 text-blue-600" size={25} />
+
+                <span className="text-sm font-semibold text-slate-700">
+                  Choose a file to attach
+                </span>
+
+                <span className="mt-1 text-xs text-slate-500">
+                  JPG, PNG, WEBP or PDF · Maximum 20 MB
+                </span>
+
+                <input
+                  id="enquiry-attachment"
+                  name="attachment"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={handleFileChange}
+                  className="sr-only"
+                />
+              </label>
+
+              {selectedFile && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <FileText size={20} className="shrink-0 text-blue-600" />
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-800">
+                        {selectedFile.name}
+                      </p>
+
+                      <p className="text-xs text-slate-500">
+                        {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFile(null)
+                      const input = document.getElementById(
+                        'enquiry-attachment'
+                      ) as HTMLInputElement | null
+
+                      if (input) input.value = ''
+                    }}
+                    className="shrink-0 rounded-lg p-2 text-slate-500 transition hover:bg-red-100 hover:text-red-600"
+                    aria-label="Remove attachment"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
+              disabled={isSubmitting}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Continue to WhatsApp
-              <ArrowRight size={18} />
+              {isSubmitting ? 'Submitting Enquiry...' : 'Submit Enquiry & Continue to WhatsApp'}
+
+              {!isSubmitting && <ArrowRight size={18} />}
             </button>
 
+            {submitMessage && (
+              <p
+                role="status"
+                aria-live="polite"
+                className="break-words text-center text-sm text-slate-600"
+              >
+                {submitMessage}
+              </p>
+            )}
+
             <p className="text-center text-xs leading-5 text-slate-500">
-              Your enquiry will open in WhatsApp for you to send. Your
-              cleaning booking is confirmed only after SAMFEM responds.
+              Your enquiry and any attachment will be saved securely before WhatsApp opens. Once WhatsApp opens with your enquiry details, tap Send to deliver your message to SAMFEM. Your cleaning booking is confirmed only after SAMFEM responds.
             </p>
+
           </form>
 
         </div>
