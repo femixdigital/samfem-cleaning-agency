@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   LogOut,
   RefreshCw,
@@ -62,6 +63,7 @@ type DateFilter = 'all' | 'today' | 'week' | 'month'
 const STORAGE_BUCKET = 'enquiry-attachments'
 
 export default function AdminDashboard() {
+  const navigate = useNavigate()
   const [enquiries, setEnquiries] = useState<Enquiry[]>([])
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
@@ -270,7 +272,7 @@ export default function AdminDashboard() {
     if (logoutError) {
       setError('Unable to sign out. Please try again.')
     } else {
-      window.location.replace('/admin/login')
+      navigate('/admin/login', { replace: true })
     }
   }
 
