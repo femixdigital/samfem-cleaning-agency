@@ -90,13 +90,13 @@ const Payment = () => {
               </div>
             </div>
 
-            <div className="rounded-xl bg-blue-50 p-5">
-              <div className="flex items-center gap-2 text-blue-800">
+            <div className="rounded-xl bg-blue-50 dark:bg-slate-800 p-5">
+              <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
                 <CreditCard size={19} />
                 <h4 className="font-bold">Payment Instructions</h4>
               </div>
 
-              <ol className="mt-3 list-inside list-decimal space-y-2 text-sm leading-6 text-slate-700">
+              <ol className="mt-3 list-inside list-decimal space-y-2 text-sm leading-6 text-slate-700 dark:text-slate-200">
                 <li>Confirm the total service charge with SAMFEM before payment.</li>
                 <li>Transfer the agreed amount to the account displayed above.</li>
                 <li>Verify the account name before completing your transfer.</li>
