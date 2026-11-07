@@ -22,6 +22,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import AdminReviews from '../components/AdminReviews'
 
 type Enquiry = {
   id: string
@@ -810,6 +811,7 @@ export default function AdminDashboard() {
         </section>
 
         <div className="mt-6 flex flex-col items-center justify-between gap-2 text-xs text-slate-400 sm:flex-row">
+          <AdminReviews />
           <p>SAMFEM Cleaning Agency · Administration</p>
           <p className="flex items-center gap-1">
             <Users size={13} />

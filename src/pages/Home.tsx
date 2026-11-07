@@ -5,6 +5,7 @@ import Services from '../components/Services'
 import Gallery from '../components/Gallery'
 import Promotions from '../components/Promotions'
 import WhyChooseUs from '../components/WhyChooseUs'
+import Reviews from '../components/Reviews'
 import Payment from '../components/Payment'
 import Contact from '../components/Contact'
 import Footer from '../components/Footer'
@@ -14,18 +15,17 @@ const Home = () => {
   return (
     <>
       <Navbar />
-
       <main>
         <Hero />
-          <ServiceMarquee />
+        <ServiceMarquee />
         <Services />
         <Gallery />
         <Promotions />
         <WhyChooseUs />
+        <Reviews />
         <Payment />
         <Contact />
       </main>
-
       <Footer />
       <FloatingWhatsApp />
     </>
