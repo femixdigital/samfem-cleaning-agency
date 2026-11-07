@@ -6,11 +6,23 @@ import {
   Sun,
   Moon,
   ShieldCheck,
+  Download,
 } from 'lucide-react'
 import samfemLogo from '../assets/samfem-logo.webp'
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed'
+    platform: string
+  }>
+}
+
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showInstallHelp, setShowInstallHelp] = useState(false)
+  const [installPrompt, setInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null)
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window === 'undefined') return 'light'
@@ -25,10 +37,46 @@ const Navbar = () => {
     window.localStorage.setItem('samfem-theme', theme)
   }, [theme])
 
+  useEffect(() => {
+    const handleBeforeInstall = (event: Event) => {
+      event.preventDefault()
+      setInstallPrompt(event as BeforeInstallPromptEvent)
+    }
+
+    const handleInstalled = () => {
+      setInstallPrompt(null)
+      setShowInstallHelp(false)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall)
+    window.addEventListener('appinstalled', handleInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
+      window.removeEventListener('appinstalled', handleInstalled)
+    }
+  }, [])
+
   const closeMenu = () => setMenuOpen(false)
 
   const toggleTheme = () =>
     setTheme(current => current === 'light' ? 'dark' : 'light')
+
+  const handleInstall = async () => {
+    if (!installPrompt) {
+      setShowInstallHelp(current => !current)
+      return
+    }
+
+    await installPrompt.prompt()
+    const choice = await installPrompt.userChoice
+
+    setInstallPrompt(null)
+
+    if (choice.outcome === 'accepted') {
+      setShowInstallHelp(false)
+    }
+  }
 
   const adminLoginHref = `${import.meta.env.BASE_URL}admin/login`
 
@@ -40,6 +88,21 @@ const Navbar = () => {
     { name: 'Payment', href: '#payment' },
     { name: 'Contact', href: '#contact' },
   ]
+
+  const InstallButton = ({ mobile = false }: { mobile?: boolean }) => (
+    <button
+      type="button"
+      onClick={handleInstall}
+      className={
+        mobile
+          ? 'mt-2 flex w-full items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100'
+          : 'inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100'
+      }
+    >
+      <Download size={17} />
+      Install App
+    </button>
+  )
 
   const ThemeButton = () => (
     <button
@@ -57,7 +120,6 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
       <nav className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-8">
-
         <a
           href="#home"
           onClick={closeMenu}
@@ -87,6 +149,7 @@ const Navbar = () => {
         {/* Desktop Actions */}
         <div className="hidden items-center gap-2 lg:flex">
           <ThemeButton />
+          <InstallButton />
 
           <a
             href={adminLoginHref}
@@ -121,6 +184,46 @@ const Navbar = () => {
         </div>
       </nav>
 
+      {/* Installation Instructions */}
+      {showInstallHelp && (
+        <div className="mx-auto max-w-7xl px-4 pb-4 md:px-8">
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-slate-700">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="font-bold text-blue-800">
+                Install SAMFEM Cleaning Agency
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowInstallHelp(false)}
+                aria-label="Close installation instructions"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="mb-2">
+              Choose the instructions for your browser:
+            </p>
+
+            <ul className="list-inside list-disc space-y-1">
+              <li>
+                <strong>Android Chrome:</strong> Open the browser menu (⋮)
+                and select Install app or Add to Home screen.
+              </li>
+              <li>
+                <strong>iPhone/iPad Safari:</strong> Tap Share, then
+                Add to Home Screen.
+              </li>
+              <li>
+                <strong>Desktop Chrome or Edge:</strong> Look for the
+                Install icon in the address bar, or choose Install app
+                from the browser menu.
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* Mobile and Tablet Dropdown */}
       {menuOpen && (
         <div
@@ -138,6 +241,8 @@ const Navbar = () => {
                 {link.name}
               </a>
             ))}
+
+            <InstallButton mobile />
 
             <a
               href={adminLoginHref}
