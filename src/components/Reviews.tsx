@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { CheckCircle2, Loader2, Send, Star } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 
 type CustomerReview = {
   id: string
@@ -25,6 +24,7 @@ export default function Reviews() {
 
   useEffect(() => {
     const fetchReviews = async () => {
+      const { supabase } = await import('../lib/supabase')
       const { data, error } = await supabase
         .from('customer_reviews')
         .select('id, customer_name, service_name, rating, review_text, created_at')
@@ -39,7 +39,11 @@ export default function Reviews() {
       setLoading(false)
     }
 
-    void fetchReviews()
+    const timer = window.setTimeout(() => {
+      void fetchReviews()
+    }, 1200)
+
+    return () => window.clearTimeout(timer)
   }, [])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -54,6 +58,7 @@ export default function Reviews() {
 
     setSubmitting(true)
 
+    const { supabase } = await import('../lib/supabase')
     const { error: submitError } = await supabase
       .from('customer_reviews')
       .insert({

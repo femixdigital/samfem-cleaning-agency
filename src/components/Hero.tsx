@@ -150,6 +150,8 @@ const Hero = () => {
               key={activeSlide.image}
               src={activeSlide.image}
               alt={activeSlide.alt}
+              loading="eager"
+              decoding="async"
               fetchPriority={activeIndex === 0 ? 'high' : 'auto'}
               className="hero-fade h-64 w-full object-cover sm:h-80 md:h-[420px]"
             />

@@ -1,16 +1,16 @@
-const CACHE_NAME = 'samfem-app-v1';
+const CACHE_NAME = 'samfem-app-v2';
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll([
+    caches.open(CACHE_NAME).then(cache =>
+      cache.addAll([
         new URL('./', self.registration.scope).href,
         new URL('./manifest.webmanifest', self.registration.scope).href,
         new URL('./favicon.ico', self.registration.scope).href,
         new URL('./pwa-192x192.png', self.registration.scope).href,
         new URL('./pwa-512x512.png', self.registration.scope).href
-      ]);
-    })
+      ])
+    )
   );
 
   self.skipWaiting();
@@ -48,13 +48,32 @@ self.addEventListener('fetch', event => {
           }
           return response;
         })
-        .catch(async () => {
-          return (
-            await caches.match(request)
-          ) || (
-            await caches.match(new URL('./', self.registration.scope).href)
-          );
-        })
+        .catch(async () =>
+          (await caches.match(request)) ||
+          (await caches.match(new URL('./', self.registration.scope).href))
+        )
+    );
+    return;
+  }
+
+  if (
+    url.pathname.includes('/assets/') ||
+    /\.(?:png|jpg|jpeg|webp|svg|ico|woff2?)$/i.test(url.pathname)
+  ) {
+    event.respondWith(
+      caches.match(request).then(async cached => {
+        if (cached) return cached;
+
+        const response = await fetch(request);
+
+        if (response.ok) {
+          const copy = response.clone();
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(request, copy);
+        }
+
+        return response;
+      })
     );
   }
 });

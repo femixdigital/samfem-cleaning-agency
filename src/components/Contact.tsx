@@ -11,7 +11,6 @@ import {
   FileText,
   X,
 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024
 
@@ -103,6 +102,7 @@ Please let me know the available options and quotation. Thank you.`
     setSubmitMessage('Preparing your enquiry...')
 
     try {
+      const { supabase } = await import('../lib/supabase')
       let attachmentPath: string | null = null
       let attachmentName: string | null = null
       let attachmentType: string | null = null
