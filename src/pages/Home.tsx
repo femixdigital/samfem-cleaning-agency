@@ -5,6 +5,7 @@ import Services from '../components/Services'
 import Gallery from '../components/Gallery'
 import Promotions from '../components/Promotions'
 import WhyChooseUs from '../components/WhyChooseUs'
+import Payment from '../components/Payment'
 import Contact from '../components/Contact'
 import Footer from '../components/Footer'
 import FloatingWhatsApp from '../components/FloatingWhatsApp'
@@ -21,6 +22,7 @@ const Home = () => {
         <Gallery />
         <Promotions />
         <WhyChooseUs />
+        <Payment />
         <Contact />
       </main>
 

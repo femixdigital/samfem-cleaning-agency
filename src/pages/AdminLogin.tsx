@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import {
-  LockKeyhole,
   Mail,
   ArrowRight,
   Eye,
@@ -9,6 +8,7 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import samfemLogo from '../assets/samfem-logo.webp'
 
 export default function AdminLogin() {
   const navigate = useNavigate()
@@ -202,9 +202,11 @@ export default function AdminLogin() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg">
-            <LockKeyhole size={30} />
-          </div>
+          <img
+            src={samfemLogo}
+            alt="SAMFEM Cleaning Agency"
+            className="mx-auto h-20 w-auto max-w-[240px] object-contain"
+          />
 
           <h1 className="mt-5 text-2xl font-bold text-slate-900">
             SAMFEM Admin

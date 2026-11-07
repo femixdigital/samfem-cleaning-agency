@@ -30,11 +30,14 @@ const Navbar = () => {
   const toggleTheme = () =>
     setTheme(current => current === 'light' ? 'dark' : 'light')
 
+  const adminLoginHref = `${import.meta.env.BASE_URL}admin/login`
+
   const links = [
     { name: 'Home', href: '#home' },
     { name: 'Services', href: '#services' },
     { name: 'Gallery', href: '#gallery' },
     { name: 'About', href: '#about' },
+    { name: 'Payment', href: '#payment' },
     { name: 'Contact', href: '#contact' },
   ]
 
@@ -54,6 +57,7 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
       <nav className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-8">
+
         <a
           href="#home"
           onClick={closeMenu}
@@ -67,6 +71,7 @@ const Navbar = () => {
           />
         </a>
 
+        {/* Desktop Navigation */}
         <div className="hidden items-center gap-1 lg:flex">
           {links.map(link => (
             <a
@@ -79,11 +84,12 @@ const Navbar = () => {
           ))}
         </div>
 
-        <div className="hidden items-center gap-2 md:flex">
+        {/* Desktop Actions */}
+        <div className="hidden items-center gap-2 lg:flex">
           <ThemeButton />
 
           <a
-            href="/admin/login"
+            href={adminLoginHref}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
           >
             <ShieldCheck size={16} />
@@ -98,12 +104,13 @@ const Navbar = () => {
           </a>
         </div>
 
-        <div className="flex items-center gap-2 md:hidden">
+        {/* Mobile and Tablet Controls */}
+        <div className="flex items-center gap-2 lg:hidden">
           <ThemeButton />
 
           <button
             type="button"
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() => setMenuOpen(current => !current)}
             className="rounded-lg p-2 text-slate-800 transition hover:bg-slate-100"
             aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
             aria-expanded={menuOpen}
@@ -114,10 +121,11 @@ const Navbar = () => {
         </div>
       </nav>
 
+      {/* Mobile and Tablet Dropdown */}
       {menuOpen && (
         <div
           id="mobile-navigation"
-          className="border-t border-slate-100 bg-white px-4 py-4 shadow-lg md:hidden"
+          className="border-t border-slate-100 bg-white px-4 py-4 shadow-lg lg:hidden"
         >
           <div className="mx-auto flex max-w-7xl flex-col gap-1">
             {links.map(link => (
@@ -132,7 +140,7 @@ const Navbar = () => {
             ))}
 
             <a
-              href="/admin/login"
+              href={adminLoginHref}
               onClick={closeMenu}
               className="mt-2 flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
             >
