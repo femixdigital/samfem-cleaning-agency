@@ -5,6 +5,8 @@ import {
   Mail,
   MessageCircle,
   ArrowRight,
+  Loader2,
+  CheckCircle2,
   Paperclip,
   FileText,
   X,
@@ -23,6 +25,7 @@ const ALLOWED_FILE_TYPES = [
 const Contact = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState('')
+  const [submittedWhatsappUrl, setSubmittedWhatsappUrl] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const today = new Date()
@@ -65,6 +68,7 @@ const Contact = () => {
     event.preventDefault()
 
     if (isSubmitting) return
+    setSubmittedWhatsappUrl('')
 
     const form = event.currentTarget
     const formData = new FormData(form)
@@ -149,13 +153,10 @@ Please let me know the available options and quotation. Thank you.`
         throw new Error(`Unable to save enquiry: ${error.message}`)
       }
 
-      setSubmitMessage('Enquiry saved! Redirecting to WhatsApp...')
-
       setSelectedFile(null)
       form.reset()
-
-      // Navigate in the current tab to avoid popup blocking.
-      window.location.assign(whatsappUrl)
+      setSubmitMessage('')
+      setSubmittedWhatsappUrl(whatsappUrl)
 
     } catch (error) {
       console.error('Enquiry submission error:', error)
@@ -495,23 +496,69 @@ Please let me know the available options and quotation. Thank you.`
               disabled={isSubmitting}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? 'Submitting Enquiry...' : 'Submit Enquiry & Continue to WhatsApp'}
-
-              {!isSubmitting && <ArrowRight size={18} />}
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Processing your enquiry...
+                </>
+              ) : (
+                <>
+                  Submit Enquiry
+                  <ArrowRight size={18} />
+                </>
+              )}
             </button>
 
-            {submitMessage && (
-              <p
+            {isSubmitting && (
+              <div
                 role="status"
                 aria-live="polite"
-                className="break-words text-center text-sm text-slate-600"
+                className="rounded-lg bg-blue-50 p-3 text-center text-sm font-medium text-blue-700"
               >
+                <Loader2 size={18} className="mr-2 inline animate-spin" />
+                {submitMessage || 'Please wait while we process your enquiry...'}
+              </div>
+            )}
+
+            {submitMessage && !isSubmitting && (
+              <p role="alert" className="break-words text-center text-sm text-red-600">
                 {submitMessage}
               </p>
             )}
 
+            {submittedWhatsappUrl && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="space-y-4 rounded-xl border border-green-200 bg-green-50 p-5"
+              >
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 size={28} className="shrink-0 text-green-600" />
+                  <div>
+                    <h4 className="font-bold text-green-800">
+                      Enquiry submitted successfully!
+                    </h4>
+                    <p className="mt-1 text-sm text-green-700">
+                      Your enquiry has been saved securely. You can now continue to WhatsApp to send your message.
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href={submittedWhatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-3 font-bold text-white transition hover:bg-green-700"
+                >
+                  <MessageCircle size={19} />
+                  Continue to WhatsApp
+                  <ArrowRight size={18} />
+                </a>
+              </div>
+            )}
+
             <p className="text-center text-xs leading-5 text-slate-500">
-              Your enquiry and any attachment will be saved securely before WhatsApp opens. Once WhatsApp opens with your enquiry details, tap Send to deliver your message to SAMFEM. Your cleaning booking is confirmed only after SAMFEM responds.
+              Your enquiry and any attachment will be saved securely first. After successful submission, you can choose to continue to WhatsApp and send your message to SAMFEM. Your cleaning booking is confirmed only after SAMFEM responds.
             </p>
 
           </form>
