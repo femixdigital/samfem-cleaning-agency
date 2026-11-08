@@ -7,6 +7,7 @@ import {
   Clock,
   CheckCircle,
   MessageCircle,
+  Mail,
   Search,
   Download,
   Trash2,
@@ -28,6 +29,9 @@ type Enquiry = {
   id: string
   full_name: string
   phone: string
+  email: string | null
+  email_notifications_enabled: boolean
+  notification_consent_at: string | null
   service: string
   property_location: string
   preferred_date: string
@@ -287,6 +291,7 @@ export default function AdminDashboard() {
       const searchableText = [
         item.full_name,
         item.phone,
+        item.email || '',
         item.service,
         item.property_location,
         item.details || '',
@@ -367,6 +372,8 @@ export default function AdminDashboard() {
     const headers = [
       'Customer Name',
       'Phone',
+      'Email',
+      'Email Notifications Enabled',
       'Service',
       'Location',
       'Preferred Date',
@@ -382,6 +389,8 @@ export default function AdminDashboard() {
     const rows = filteredEnquiries.map(item => [
       item.full_name,
       item.phone,
+      item.email || '',
+      item.email_notifications_enabled ? 'Yes' : 'No',
       item.service,
       item.property_location,
       item.preferred_date,
@@ -713,6 +722,10 @@ export default function AdminDashboard() {
                         </div>
 
                         <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                          <p className="flex items-center gap-2 break-all">
+                            <Mail size={14} className="shrink-0 text-slate-400" />
+                            {item.email || 'Email not provided'}
+                          </p>
                           <p className="flex items-center gap-2">
                             <Phone size={14} className="shrink-0 text-slate-400" />
                             {item.phone}
@@ -756,6 +769,20 @@ export default function AdminDashboard() {
                           <Phone size={15} />
                           Call
                         </a>
+
+                        {item.email ? (
+                          <a
+                            href={`mailto:${item.email}`}
+                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-blue-200 px-3 py-2.5 text-xs font-bold text-blue-700 transition hover:bg-blue-50 lg:flex-none"
+                          >
+                            <Mail size={15} />
+                            Email Customer
+                          </a>
+                        ) : (
+                          <span className="text-center text-xs text-slate-400">
+                            No email available
+                          </span>
+                        )}
 
                         <a
                           href={`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`}
@@ -858,6 +885,8 @@ export default function AdminDashboard() {
             <div className="mt-6 space-y-4 text-sm">
               {[
                 ['Phone', selectedEnquiry.phone],
+                ['Email', selectedEnquiry.email || 'Not provided'],
+                ['Email notifications consent', selectedEnquiry.email_notifications_enabled ? 'Yes' : 'No'],
                 ['Service', selectedEnquiry.service],
                 ['Property location', selectedEnquiry.property_location],
                 ['Preferred date', formatDate(selectedEnquiry.preferred_date)],
@@ -997,7 +1026,17 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="mt-6 flex gap-2">
+            <div className="mt-6 flex flex-wrap gap-2">
+              {selectedEnquiry.email && (
+                <a
+                  href={`mailto:${selectedEnquiry.email}`}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700"
+                >
+                  <Mail size={17} />
+                  Email
+                </a>
+              )}
+
               <a
                 href={`https://wa.me/${getWhatsAppNumber(selectedEnquiry.phone)}`}
                 target="_blank"

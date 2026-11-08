@@ -75,6 +75,9 @@ const Contact = () => {
     const enquiry = {
       full_name: String(formData.get('name') || '').trim(),
       phone: String(formData.get('phone') || '').trim(),
+      email: String(formData.get('email') || '').trim().toLowerCase(),
+      email_notifications_enabled: formData.get('email-consent') === 'on',
+      notification_consent_at: new Date().toISOString(),
       service: String(formData.get('service') || ''),
       property_location: String(formData.get('location') || '').trim(),
       preferred_date: String(formData.get('date') || ''),
@@ -339,6 +342,25 @@ Please let me know the available options and quotation. Thank you.`
 
             <div>
               <label
+                htmlFor="customer-email"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Email Address *
+              </label>
+
+              <input
+                id="customer-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                placeholder="Enter your email address"
+                className="w-full rounded-lg border border-slate-200 px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            <div>
+              <label
                 htmlFor="cleaning-service"
                 className="mb-2 block text-sm font-semibold text-slate-700"
               >
@@ -489,6 +511,23 @@ Please let me know the available options and quotation. Thank you.`
                   </button>
                 </div>
               )}
+            </div>
+
+            <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="email-consent"
+                  required
+                  className="mt-1 h-4 w-4 shrink-0 accent-blue-600"
+                />
+
+                <span className="text-sm leading-6 text-slate-700">
+                  I agree to receive email notifications from SAMFEM Cleaning
+                  Agency about my enquiry, quotations, booking confirmations,
+                  service updates and completion. *
+                </span>
+              </label>
             </div>
 
             <button
