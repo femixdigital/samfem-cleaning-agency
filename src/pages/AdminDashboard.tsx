@@ -63,6 +63,17 @@ const statusStyles: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-700',
 }
 
+type EmailNotification = {
+  id: string
+  recipient: string
+  subject: string
+  notification_type: string
+  status: 'pending' | 'sent' | 'failed'
+  error_message: string | null
+  sent_at: string | null
+  created_at: string
+}
+
 type DateFilter = 'all' | 'today' | 'week' | 'month'
 
 const STORAGE_BUCKET = 'enquiry-attachments'
@@ -83,6 +94,14 @@ export default function AdminDashboard() {
   const [downloading, setDownloading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [emailSubject, setEmailSubject] = useState('')
+  const [emailMessage, setEmailMessage] = useState('')
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailHistory, setEmailHistory] = useState<EmailNotification[]>([])
+  const [emailHistoryLoading, setEmailHistoryLoading] = useState(false)
+  const [emailError, setEmailError] = useState('')
+  const [emailSuccess, setEmailSuccess] = useState('')
+
 
   const fetchEnquiries = useCallback(async () => {
     setLoading(true)
@@ -102,6 +121,91 @@ export default function AdminDashboard() {
 
     setLoading(false)
   }, [])
+
+  const sendCustomEmail = async () => {
+    if (!selectedEnquiry?.email) {
+      setEmailError('This customer has no email address.')
+      return
+    }
+
+    if (!selectedEnquiry.email_notifications_enabled) {
+      setEmailError('The customer has not consented to email notifications.')
+      return
+    }
+
+    if (!emailSubject.trim() || !emailMessage.trim()) {
+      setEmailError('Enter both an email subject and message.')
+      return
+    }
+
+    setSendingEmail(true)
+    setEmailError('')
+    setEmailSuccess('')
+
+    const idempotencyKey = crypto.randomUUID()
+
+    const { data, error: sendError } = await supabase.functions.invoke(
+      'send-enquiry-email',
+      {
+        body: {
+          enquiryId: selectedEnquiry.id,
+          notificationType: 'custom',
+          customSubject: emailSubject.trim(),
+          customMessage: emailMessage.trim(),
+          idempotencyKey,
+        },
+      }
+    )
+
+    if (sendError) {
+      console.error('Custom email error:', sendError)
+      setEmailError('Unable to send email. Please check your connection and try again.')
+    } else if (data?.success && data?.duplicate) {
+      setEmailSuccess('This email has already been submitted.')
+    } else if (data?.success) {
+      setEmailSuccess('Email submitted successfully.')
+      setEmailSubject('')
+      setEmailMessage('')
+      await fetchEmailHistory(selectedEnquiry.id)
+    } else {
+      setEmailError(data?.error || 'Email could not be sent.')
+    }
+
+    setSendingEmail(false)
+  }
+
+  const fetchEmailHistory = useCallback(async (enquiryId: string) => {
+    setEmailHistoryLoading(true)
+    setEmailError('')
+
+    const { data, error: historyError } = await supabase
+      .from('email_notifications')
+      .select('id, recipient, subject, notification_type, status, error_message, sent_at, created_at')
+      .eq('enquiry_id', enquiryId)
+      .order('created_at', { ascending: false })
+
+    if (historyError) {
+      console.error('Email history error:', historyError)
+      setEmailError('Unable to load email history.')
+      setEmailHistory([])
+    } else {
+      setEmailHistory((data || []) as EmailNotification[])
+    }
+
+    setEmailHistoryLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (selectedEnquiry) {
+      setEmailSubject('')
+      setEmailMessage('')
+      setEmailError('')
+      setEmailSuccess('')
+      void fetchEmailHistory(selectedEnquiry.id)
+    } else {
+      setEmailHistory([])
+    }
+  }, [selectedEnquiry, fetchEmailHistory])
 
   useEffect(() => {
     void fetchEnquiries()
@@ -148,6 +252,9 @@ export default function AdminDashboard() {
   }, [selectedEnquiry])
 
   const updateStatus = async (id: string, status: string) => {
+    const previousEnquiry = enquiries.find(item => item.id === id)
+    const previousStatus = previousEnquiry?.status
+
     setUpdatingId(id)
     setError('')
     setSuccess('')
@@ -176,7 +283,34 @@ export default function AdminDashboard() {
         )
       }
 
-      setSuccess('Enquiry status updated successfully.')
+      let emailNotice = ''
+
+      const shouldSendEmail =
+        previousStatus !== status &&
+        status !== 'pending' &&
+        previousEnquiry?.email &&
+        previousEnquiry.email_notifications_enabled
+
+      if (shouldSendEmail) {
+        const { error: emailError } = await supabase.functions.invoke(
+          'send-enquiry-email',
+          {
+            body: {
+              enquiryId: id,
+              notificationType: status,
+            },
+          }
+        )
+
+        if (emailError) {
+          console.error('Customer notification error:', emailError)
+          emailNotice = ' However, the customer notification email could not be sent.'
+        } else {
+          emailNotice = ' Customer notification email sent.'
+        }
+      }
+
+      setSuccess('Enquiry status updated successfully.' + emailNotice)
     }
 
     setUpdatingId(null)
@@ -1001,6 +1135,128 @@ export default function AdminDashboard() {
                       </>
                     )}
                   </>
+                )}
+              </div>
+
+              {/* Custom customer email composer */}
+              <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Mail size={18} className="text-blue-600" />
+                  <h4 className="font-bold text-slate-800">Send customer email</h4>
+                </div>
+
+                {!selectedEnquiry.email ? (
+                  <p className="text-sm text-slate-500">No customer email address is available.</p>
+                ) : !selectedEnquiry.email_notifications_enabled ? (
+                  <p className="text-sm text-amber-700">
+                    This customer has not consented to email notifications.
+                  </p>
+                ) : (
+                  <>
+                    <p className="mb-3 break-all text-xs text-slate-500">
+                      To: {selectedEnquiry.email}
+                    </p>
+
+                    <input
+                      type="text"
+                      value={emailSubject}
+                      onChange={event => setEmailSubject(event.target.value)}
+                      maxLength={200}
+                      placeholder="Email subject"
+                      className="mb-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-blue-500"
+                    />
+
+                    <textarea
+                      value={emailMessage}
+                      onChange={event => setEmailMessage(event.target.value)}
+                      maxLength={5000}
+                      rows={6}
+                      placeholder="Write your quotation or service update..."
+                      className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-blue-500"
+                    />
+
+                    <p className="mt-1 text-right text-xs text-slate-400">
+                      {emailMessage.length}/5000 characters
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => void sendCustomEmail()}
+                      disabled={sendingEmail || !emailSubject.trim() || !emailMessage.trim()}
+                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Mail size={16} />
+                      {sendingEmail ? 'Sending email...' : 'Send email'}
+                    </button>
+                  </>
+                )}
+
+                {emailError && (
+                  <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                    {emailError}
+                  </p>
+                )}
+
+                {emailSuccess && (
+                  <p className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-700">
+                    {emailSuccess}
+                  </p>
+                )}
+              </div>
+
+              {/* Customer email notification history */}
+              <div className="rounded-xl border border-slate-200 p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h4 className="font-bold text-slate-800">Email history</h4>
+                  <button
+                    type="button"
+                    onClick={() => void fetchEmailHistory(selectedEnquiry.id)}
+                    disabled={emailHistoryLoading}
+                    className="text-xs font-semibold text-blue-600 disabled:opacity-50"
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                {emailHistoryLoading ? (
+                  <p className="text-sm text-slate-500">Loading email history...</p>
+                ) : emailHistory.length === 0 ? (
+                  <p className="text-sm text-slate-500">No email notifications recorded yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {emailHistory.map(item => (
+                      <div key={item.id} className="rounded-lg bg-slate-50 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-800">
+                            {item.subject}
+                          </p>
+                          <span className={`rounded-full px-2 py-1 text-xs font-bold ${
+                            item.status === 'sent'
+                              ? 'bg-green-100 text-green-700'
+                              : item.status === 'failed'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {item.status.toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="mt-1 break-all text-xs text-slate-500">
+                          To: {item.recipient}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Type: {item.notification_type}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {formatDateTime(item.sent_at || item.created_at)}
+                        </p>
+                        {item.error_message && (
+                          <p className="mt-2 text-xs text-red-600">
+                            {item.error_message}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 
